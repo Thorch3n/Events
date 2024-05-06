@@ -28,7 +28,6 @@ class JWTAuthenticationMiddleware:
     def __call__(self, request):
         # Проверяем, есть ли токен в куках запроса
         jwt_token = request.COOKIES.get('jwt_token')
-        print(jwt_token)
         # Если токен присутствует, пытаемся аутентифицировать пользователя
         if jwt_token:
             try:
@@ -71,7 +70,6 @@ class EventViewSet(viewsets.ModelViewSet):
 
         # Получаем JWT токен из куки
         jwt_token = request.COOKIES.get('jwt_token')
-        print(request.user)
         if jwt_token:
             try:
                 # Декодируем токен, чтобы получить идентификатор пользователя
@@ -162,11 +160,11 @@ class CreateUserView(APIView):
             return render(request, 'event/register.html', {'form': form})
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    @method_decorator(ensure_csrf_cookie)  # Ensure CSRF cookie is set in the response
+    @method_decorator(ensure_csrf_cookie)
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    @method_decorator(csrf_protect)  # Apply CSRF protection to the view
+    @method_decorator(csrf_protect)
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -243,7 +241,6 @@ def my_events(request):
 
         # Преобразуем queryset в список
         registred_events_list = list(registred_events)
-        print(registred_events_list)
         # Передаем список мероприятий в контекст шаблона
         return render(request, 'event/my_events.html', {'registered_events': registred_events_list})
     else:
