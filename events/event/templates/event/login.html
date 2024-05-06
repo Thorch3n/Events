@@ -1,0 +1,18 @@
+{% extends 'event/base.html' %}
+{% block title %}
+	Авторизация
+{% endblock %}
+{% block header %}
+	<header>
+        <a href="/">Главная</a>
+        <a href="/register">Регистрация</a>
+    </header>
+{% endblock %}
+{% block body %}
+	<h2>Вход</h2>
+    <form id="login-form" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Войти</button>
+    </form>
+{% endblock %}

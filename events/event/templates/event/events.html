@@ -1,0 +1,197 @@
+{% extends 'event/base.html' %}
+
+{% block title %}
+    Events
+{% endblock %}
+
+{% block body %}
+    <style>
+        .event-container {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .event-button {
+            background-color: #ff4d00;
+            border: none;
+            color: black;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .event-button-registred {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .event-button:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .event-button-registred:hover {
+            background-color: #45a049;
+        }
+
+        .event-title {
+            text-align: center; /* Центрирование заголовка */
+            margin-top: 0; /* Убираем верхний отступ у заголовка */
+        }
+        .event-button, .event-button-registred {
+                /* Другие стили кнопок */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Добавляем тень */
+                border-radius: 5px; /* Задаем скругление углов */
+            }
+        .event-button:active, .event-button-registred:active {
+    box-shadow: none; /* Убираем тень при нажатии */
+    transform: translateY(1px); /* Смещаем кнопку на 1px вниз для создания визуального эффекта нажатия */
+}
+    </style>
+
+    <h1 style="text-align: center;">Мероприятия</h1>
+    <div id="event-list">
+        <!-- Здесь будут отображаться события -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            fetchEvents();
+        });
+
+        function fetchEvents() {
+            fetch('/api/events/', {
+                headers: {
+                    'Authorization': 'Bearer ' + getJWTToken(),
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const eventList = document.getElementById('event-list');
+                    data.forEach(event => {
+                        const eventElement = document.createElement('div');
+                        eventElement.classList.add('event-container');
+                        if (isUserRegistered(event.registered_users)) {
+                            eventElement.innerHTML = `
+                                <h3 class="event-title">${event.title}</h3>
+                                <p>Описание: ${event.description}</p>
+                                <p>Дата начала: ${event.start_date}</p>
+                                <p>Дата окончания: ${event.end_date}</p>
+                                <p>Место проведения: ${event.location}</p>
+                                <button disabled class="event-button-registred">Вы уже зарегистрированы</button>
+                            `;
+                        } else {
+                            eventElement.innerHTML = `
+                                <h3>${event.title}</h3>
+                                <p>Описание: ${event.description}</p>
+                                <p>Дата начала: ${event.start_date}</p>
+                                <p>Дата окончания: ${event.end_date}</p>
+                                <p>Место проведения: ${event.location}</p>
+                                {% if user.is_authenticated %}
+                                <form id="register-form-${event.id}" onsubmit="registerEvent(${event.id}); return false;">
+                                    {% csrf_token %}
+                                    <button id="register-button-${event.id}" type="submit" class="event-button">Зарегистрироваться</button>
+                                </form>
+                                {% else %}
+                                <form id="login" action="/login/" method="GET">
+                                    {% csrf_token %}
+                                    <button id="login" type="submit" class="event-button">Авторизоваться</button>
+                                </form>
+                                {% endif %}
+                            `;
+                        }
+                        eventList.appendChild(eventElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function registerEvent(eventId) {
+            const token = getJWTToken(); // Получаем JWT токен
+            const registerButton = document.getElementById(`register-button-${eventId}`);
+            registerButton.disabled = true; // Делаем кнопку неактивной
+            registerButton.style.backgroundColor = '#4CAF50';
+            registerButton.style.color = 'white';
+            registerButton.innerText = 'Успешно зарегистрировано'; // Изменяем надпись на кнопке
+
+            fetch(`/api/events/${eventId}/register/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({}) // Пустое тело запроса, если не требуются дополнительные данные
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    // Обработка успешного ответа от сервера после регистрации
+                    // Например, обновление интерфейса, чтобы отразить изменения
+                    // Можно также перезагрузить страницу для обновления списка событий
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function getCookie(name) {
+            const cookieName = name + "=";
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const cookieArray = decodedCookie.split(';');
+            for (let i = 0; i < cookieArray.length; i++) {
+                let cookie = cookieArray[i];
+                while (cookie.charAt(0) === ' ') {
+                    cookie = cookie.substring(1);
+                }
+                if (cookie.indexOf(cookieName) === 0) {
+                    return cookie.substring(cookieName.length, cookie.length);
+                }
+            }
+            return "";
+        }
+
+        function getJWTToken() {
+            const token = getCookie('jwt_token');
+            console.log("JWT Token:", token);
+            return token;
+        }
+
+        function isUserRegistered(registeredUsers) {
+            console.log('Registered users:', registeredUsers);
+            const userId = parseInt('{{ user.id }}');
+            console.log('User ID:', userId);
+            const isRegistered = registeredUsers.some(user => user === userId);
+            console.log('Is user registered:', isRegistered);
+            return isRegistered;
+        }
+    </script>
+{% endblock %}
